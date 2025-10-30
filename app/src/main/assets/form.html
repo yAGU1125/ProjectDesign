@@ -1,0 +1,27 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>食材录入</title>
+<style>label{display:block;margin:10px 0} body{font-family:sans-serif;padding:16px}</style>
+<h2>临期/食材录入</h2>
+<label>名称 <input id="name" required></label>
+<label>条码 <input id="barcode"></label>
+<label>数量 <input id="qty" type="number" min="0" step="1" value="1"></label>
+<label>到期日 <input id="expires" type="date"></label>
+<button onclick="submitForm()">提交</button>
+<p id="msg"></p>
+<script>
+    function submitForm(){
+      const payload = {
+        name: document.getElementById('name').value.trim(),
+        barcode: document.getElementById('barcode').value.trim() || null,
+        qty: Number(document.getElementById('qty').value || 0),
+        expires: document.getElementById('expires').value || null
+      };
+      if(!payload.name){ return show('请输入名称'); }
+      try{ Android.submit(JSON.stringify(payload)); }catch(e){ show('原生接口不可用：'+e.message); }
+    }
+    function onNativeResult(status, message){
+      show((status==='ok'?'✅ ':'❌ ')+message);
+    }
+    function show(t){ document.getElementById('msg').textContent = t; }
+</script>

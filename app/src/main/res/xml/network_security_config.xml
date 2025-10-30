@@ -6,6 +6,4 @@
         </trust-anchors>
     </base-config>
 </network-security-config>
-<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
 
-</PreferenceScreen>
