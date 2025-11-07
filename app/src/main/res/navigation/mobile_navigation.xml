@@ -3,29 +3,78 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/mobile_navigation"
-    app:startDestination="@+id/nav_transform">
+    app:startDestination="@id/navigation_home">
 
     <fragment
-        android:id="@+id/nav_transform"
-        android:name="com.kit.projectdesign.ui.transform.TransformFragment"
-        android:label="@string/menu_transform"
-        tools:layout="@layout/fragment_transform" />
+        android:id="@+id/navigation_home"
+        android:name="com.kit.projectdesign.ui.home.HomeFragment"
+        android:label="ホーム"
+        tools:layout="@layout/fragment_home">
+        <action
+            android:id="@+id/action_home_to_notification_detail"
+            app:destination="@id/navigation_notification_detail" />
+    </fragment>
 
     <fragment
-        android:id="@+id/nav_reflow"
-        android:name="com.kit.projectdesign.ui.reflow.ReflowFragment"
-        android:label="@string/menu_reflow"
-        tools:layout="@layout/fragment_reflow" />
+        android:id="@+id/navigation_discount"
+        android:name="com.kit.projectdesign.ui.discount.DiscountFragment"
+        android:label="割引商品"
+        tools:layout="@layout/fragment_discount">
+        <action
+            android:id="@+id/action_navigation_discount_to_navigation_discount_detail"
+            app:destination="@id/navigation_discount_detail" />
+    </fragment>
 
     <fragment
-        android:id="@+id/nav_slideshow"
-        android:name="com.kit.projectdesign.ui.slideshow.SlideshowFragment"
-        android:label="@string/menu_slideshow"
-        tools:layout="@layout/fragment_slideshow" />
+        android:id="@+id/navigation_recipe"
+        android:name="com.kit.projectdesign.ui.recipe.RecipeFragment"
+        android:label="レシピ"
+        tools:layout="@layout/fragment_recipe">
+        <action
+            android:id="@+id/action_recipe_to_detail"
+            app:destination="@id/navigation_recipe_detail" />
+    </fragment>
 
     <fragment
-        android:id="@+id/nav_settings"
+        android:id="@+id/navigation_mypage"
+        android:name="com.kit.projectdesign.ui.mypage.MypageFragment"
+        android:label="マイページ"
+        tools:layout="@layout/fragment_mypage" />
+
+    <fragment
+        android:id="@+id/navigation_settings"
         android:name="com.kit.projectdesign.ui.settings.SettingsFragment"
-        android:label="@string/menu_settings"
+        android:label="設定"
         tools:layout="@layout/fragment_settings" />
+
+    <fragment
+        android:id="@+id/navigation_notification_detail"
+        android:name="com.kit.projectdesign.ui.notification.NotificationDetailFragment"
+        android:label="お知らせ"
+        tools:layout="@layout/fragment_notification_detail">
+        <argument
+            android:name="notification"
+            app:argType="com.kit.projectdesign.data.Notification" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/navigation_discount_detail"
+        android:name="com.kit.projectdesign.ui.discount.DiscountDetailFragment"
+        android:label="商品詳細"
+        tools:layout="@layout/fragment_discount_detail">
+        <argument
+            android:name="discountItem"
+            app:argType="com.kit.projectdesign.data.DiscountItem" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/navigation_recipe_detail"
+        android:name="com.kit.projectdesign.ui.recipe.RecipeDetailFragment"
+        android:label="レシピ詳細"
+        tools:layout="@layout/fragment_recipe_detail">
+        <argument
+            android:name="recipe"
+            app:argType="com.kit.projectdesign.data.Recipe" />
+    </fragment>
+
 </navigation>

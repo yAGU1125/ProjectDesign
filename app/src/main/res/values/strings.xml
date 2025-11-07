@@ -1,5 +1,10 @@
 <resources>
     <string name="app_name">ProjectDesign</string>
+    <string name="title_home">ホーム</string>
+    <string name="title_discount">割引商品</string>
+    <string name="title_recipe">レシピ</string>
+    <string name="title_mypage">マイページ</string>
+    <string name="title_settings">設定</string>
     <string name="navigation_drawer_open">Open navigation drawer</string>
     <string name="navigation_drawer_close">Close navigation drawer</string>
     <string name="nav_header_title">Android Studio</string>
@@ -16,8 +21,7 @@
     <string name="lorem_ipsum">Lorem Ipsum is simply placeholder text of the printing and
         typesetting industry. Lorem Ipsum has been the industry\'s standard placeholder text ever
         since the 1500s, when an unknown printer took a galley of type and scrambled it to make a
-        type specimen book"
-    </string>
+        type specimen book"</string>
     <string name="fab_content_description">Represents a view to invoke an action</string>
     <string name="image_view_item_transform_content_description">Represents an image view in the
         item
