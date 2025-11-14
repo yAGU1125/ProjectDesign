@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -36,14 +35,6 @@
             android:textAppearance="@style/TextAppearance.MaterialComponents.Body1"
             android:textSize="16sp"
             tools:text="期間限定のプレミアムチョコクロワッサンのレシピを公開しました。ぜひチェックしてみてください！\n\n材料や作り方の詳細はこちらからご覧いただけます。お家で本格的な味を再現してみましょう！" />
-
-        <Button
-            android:id="@+id/button_back_to_home"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center_horizontal"
-            android:layout_marginTop="24dp"
-            android:text="ホームに戻る" />
 
     </LinearLayout>
 

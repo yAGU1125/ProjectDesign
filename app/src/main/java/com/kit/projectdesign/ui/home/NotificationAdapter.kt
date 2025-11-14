@@ -1,6 +1,8 @@
 package com.kit.projectdesign.ui.home
 
+import android.graphics.Typeface
 import android.view.LayoutInflater
+import android.view.View
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
 import com.kit.projectdesign.data.Notification
@@ -40,6 +42,17 @@ class NotificationAdapter(
             binding.notificationTitle.text = notification.title
             binding.notificationDate.text = notification.date
             binding.notificationBody.text = notification.body
+
+            // 既読状態に応じて表示を切り替え
+            if (notification.isRead) {
+                // 既読の場合
+                binding.unreadIndicator.visibility = View.GONE
+                binding.notificationTitle.typeface = Typeface.DEFAULT
+            } else {
+                // 未読の場合
+                binding.unreadIndicator.visibility = View.VISIBLE
+                binding.notificationTitle.typeface = Typeface.DEFAULT_BOLD
+            }
         }
     }
 }
