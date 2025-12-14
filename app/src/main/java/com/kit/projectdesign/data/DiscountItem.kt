@@ -5,6 +5,7 @@ import kotlinx.parcelize.Parcelize
 
 @Parcelize
 data class DiscountItem(
+    val id: String? = null,
     val name: String,
     val oldPrice: Int,
     val newPrice: Int,

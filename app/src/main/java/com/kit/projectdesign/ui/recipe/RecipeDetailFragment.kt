@@ -6,6 +6,8 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.navArgs
+import coil.load
+import com.kit.projectdesign.R
 import com.kit.projectdesign.databinding.FragmentRecipeDetailBinding
 
 class RecipeDetailFragment : Fragment() {
@@ -29,7 +31,11 @@ class RecipeDetailFragment : Fragment() {
 
         val recipe = args.recipe
 
-        binding.detailRecipeImage.setImageResource(recipe.imageResId)
+        binding.detailRecipeImage.load(recipe.imageUrl) {
+            crossfade(true)
+            placeholder(R.drawable.ic_recipe)
+            error(R.drawable.ic_recipe)
+        }
         binding.detailRecipeName.text = recipe.name
         binding.detailRecipeServings.text = "(${recipe.servings})"
 

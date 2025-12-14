@@ -3,6 +3,7 @@ package com.kit.projectdesign.ui.recipe
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
+import coil.load
 import com.kit.projectdesign.R
 import com.kit.projectdesign.data.Recipe
 import com.kit.projectdesign.databinding.ListItemRecipeBinding
@@ -27,7 +28,11 @@ class RecipeAdapter(
 
     inner class RecipeViewHolder(private val binding: ListItemRecipeBinding) : RecyclerView.ViewHolder(binding.root) {
         fun bind(recipe: Recipe) {
-            binding.recipeImage.setImageResource(recipe.imageResId)
+            binding.recipeImage.load(recipe.imageUrl) {
+                crossfade(true)
+                placeholder(R.drawable.ic_recipe)
+                error(R.drawable.ic_recipe)
+            }
             binding.recipeName.text = recipe.name
             binding.recipeDescription.text = recipe.description
 

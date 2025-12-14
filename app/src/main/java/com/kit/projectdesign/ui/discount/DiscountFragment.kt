@@ -4,16 +4,19 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Toast
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
-import com.kit.projectdesign.data.DiscountItem
 import com.kit.projectdesign.databinding.FragmentDiscountBinding
 
 class DiscountFragment : Fragment() {
 
     private var _binding: FragmentDiscountBinding? = null
     private val binding get() = _binding!!
+
+    private val viewModel: DiscountViewModel by viewModels()
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -27,23 +30,35 @@ class DiscountFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // ダミーデータの作成
-        val discountItems = listOf(
-            DiscountItem("サンドイッチ", 350, 240, "消費期限が近いため", "🥪"),
-            DiscountItem("からあげ弁当", 580, 400, "夕方特価セール", "🍱"),
-            DiscountItem("食パン", 150, 120, null, "🍞"),
-            DiscountItem("牛乳", 210, 150, "パッケージデザイン変更のため", "🥛"),
-            DiscountItem("リンゴ", 98, 70, "豊作による特別価格", "🍎")
-        )
-
-        // RecyclerViewにアダプターとレイアウトマネージャーをセット
+        // RecyclerView Setup
         binding.recyclerViewDiscount.layoutManager = LinearLayoutManager(context)
-        val adapter = DiscountAdapter(discountItems) { item ->
-            // アイテムがクリックされたときの処理
+        val adapter = DiscountAdapter(emptyList()) { item ->
             val action = DiscountFragmentDirections.actionNavigationDiscountToNavigationDiscountDetail(item)
             findNavController().navigate(action)
         }
         binding.recyclerViewDiscount.adapter = adapter
+
+        // Observe ViewModel
+        viewModel.discountItems.observe(viewLifecycleOwner) { items ->
+            // Update adapter with new list.
+            // Note: Since DiscountAdapter is simple, we might need to create a new one or add a method to update data.
+            // A better approach is to add a submitList method to the adapter or use ListAdapter.
+            // For now, I will re-instantiate the adapter or just let me check the adapter code again.
+            // DiscountAdapter takes items in constructor. I should modify DiscountAdapter to allow updating items.
+             binding.recyclerViewDiscount.adapter = DiscountAdapter(items) { item ->
+                val action = DiscountFragmentDirections.actionNavigationDiscountToNavigationDiscountDetail(item)
+                findNavController().navigate(action)
+            }
+        }
+
+        viewModel.error.observe(viewLifecycleOwner) { errorMessage ->
+            if (errorMessage != null) {
+                Toast.makeText(context, errorMessage, Toast.LENGTH_SHORT).show()
+            }
+        }
+
+        // Fetch data
+        viewModel.fetchDiscountItems()
     }
 
     override fun onDestroyView() {

@@ -1,16 +1,16 @@
 package com.kit.projectdesign.data
 
 import android.os.Parcelable
-import androidx.annotation.DrawableRes
 import com.kit.projectdesign.data.InstructionStep
 import kotlinx.parcelize.Parcelize
 
 @Parcelize
 data class Recipe(
     // --- 一覧表示用の基本情報 ---
+    val id: String? = null, // Backend ID
     val name: String,
     val description: String,
-    @DrawableRes val imageResId: Int,
+    val imageUrl: String?, // Changed from Int (resId) to String? (URL)
     var isLiked: Boolean = false, // いいねの状態を追加
 
     // --- 詳細表示用の追加情報 ---

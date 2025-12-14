@@ -1,11 +1,10 @@
 package com.kit.projectdesign.data
 
 import android.os.Parcelable
-import androidx.annotation.DrawableRes
 import kotlinx.parcelize.Parcelize
 
 @Parcelize
 data class InstructionStep(
     val description: String,
-    @DrawableRes val imageResId: Int
+    val imageUrl: String? // Changed from Int (resId) to String? (URL)
 ) : Parcelable
