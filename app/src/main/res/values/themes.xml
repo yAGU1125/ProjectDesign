@@ -17,6 +17,7 @@
     <style name="Theme.ProjectDesign.NoActionBar">
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
+        <item name="android:statusBarColor">?attr/colorPrimaryVariant</item>
     </style>
 
     <style name="Theme.ProjectDesign.AppBarOverlay" parent="ThemeOverlay.AppCompat.Dark.ActionBar" />

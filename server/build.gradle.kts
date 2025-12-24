@@ -1,7 +1,7 @@
 plugins {
     kotlin("jvm")
     id("io.ktor.plugin") version "2.3.7"
-    id("com.github.johnrengelman.shadow") version "8.1.1" // Add Shadow Jar plugin
+    id("com.github.johnrengelman.shadow") version "8.1.1"
     application
 }
 
@@ -18,6 +18,9 @@ dependencies {
     implementation("io.ktor:ktor-server-content-negotiation-jvm:2.3.7")
     implementation("io.ktor:ktor-serialization-gson-jvm:2.3.7")
     implementation("ch.qos.logback:logback-classic:1.4.14")
+    
+    // Add authentication dependency
+    implementation("io.ktor:ktor-server-auth-jvm:2.3.7") 
 }
 
 java {

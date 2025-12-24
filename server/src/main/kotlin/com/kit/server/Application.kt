@@ -1,44 +1,54 @@
 package com.kit.server
 
+import io.ktor.http.*
 import io.ktor.serialization.gson.*
 import io.ktor.server.application.*
+import io.ktor.server.auth.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 import io.ktor.server.plugins.contentnegotiation.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import io.ktor.http.*
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 import java.util.UUID
 
-// Data Classes
+// --- Data Classes (with default values to prevent crashes) ---
 data class DiscountItem(
     val id: String = UUID.randomUUID().toString(),
-    val name: String,
-    val oldPrice: Int,
-    val newPrice: Int,
+    val name: String = "",
+    val oldPrice: Int = 0,
+    val newPrice: Int = 0,
     val reason: String? = null,
-    val icon: String
+    val icon: String = ""
 )
 
 data class InstructionStep(
-    val description: String,
-    val imageUrl: String?
+    val description: String = "",
+    val imageUrl: String? = null
 )
 
 data class Recipe(
     val id: String = UUID.randomUUID().toString(),
-    val name: String,
-    val description: String,
-    val imageUrl: String?,
-    val servings: String,
-    val ingredients: List<String>,
-    val seasonings: List<String>,
-    val instructions: List<InstructionStep>,
-    val tips: List<String>
+    val name: String = "",
+    val description: String = "",
+    val imageUrl: String? = null,
+    val servings: String = "",
+    val ingredients: List<String> = emptyList(),
+    val seasonings: List<String> = emptyList(),
+    val instructions: List<InstructionStep> = emptyList(),
+    val tips: List<String> = emptyList()
 )
 
-// In-memory storage (Global variables)
+data class Notification(
+    val id: String = UUID.randomUUID().toString(),
+    val title: String = "",
+    val content: String = "",
+    val date: String = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm"))
+)
+
+// --- In-memory Storage (Full Data Restored) ---
 val discountItems = mutableListOf(
     DiscountItem(name = "サンドイッチ", oldPrice = 350, newPrice = 240, reason = "消費期限が近いため", icon = "🥪"),
     DiscountItem(name = "からあげ弁当", oldPrice = 580, newPrice = 400, reason = "夕方特価セール", icon = "🍱"),
@@ -154,217 +164,366 @@ val recipes = mutableListOf(
     )
 )
 
+val notifications = mutableListOf(
+    Notification(
+        title = "新しいレシピを追加しました！",
+        content = "期間限定のプレミアムチョコクロワッサンのレシピを公開しました。ぜひチェックしてみてください！"
+    ),
+    Notification(
+        title = "メンテナンスのお知らせ",
+        content = "本日23:00より、サーバーメンテナンスを実施します。",
+        date = "2024/05/20 18:00"
+    ),
+    Notification(
+        title = "アプリバージョンアップのお知らせ",
+        content = "新しい機能を追加したバージョン2.0をリリースしました。最新の機能をお楽しみいただくために、ストアからアップデートしてください。",
+        date = "2024/05/18 12:00"
+    ),
+    Notification(
+        title = "割引クーポンプレゼント！",
+        content = "いつもご利用ありがとうございます。本日限定で利用できる10%OFFクーポンをプレゼントします！マイページからご確認ください。",
+        date = "2024/05/15 09:00"
+    ),
+    Notification(
+        title = "ようこそ！",
+        content = "ProjectDesignへようこそ！あなたの毎日が、もっと豊かになりますように。",
+        date = "2024/05/10 15:00"
+    )
+)
+
 fun main() {
-    // Port set to 3031 as requested
     embeddedServer(Netty, port = 3031, host = "0.0.0.0", module = Application::module)
         .start(wait = true)
 }
 
 fun Application.module() {
-    install(ContentNegotiation) {
-        gson {
-            setPrettyPrinting()
+    install(Authentication) {
+        basic("admin-auth") {
+            realm = "Ktor Server"
+            validate { credentials ->
+                if (credentials.name == "admin" && credentials.password == "projectdesign") {
+                    UserIdPrincipal(credentials.name)
+                } else null
+            }
         }
     }
 
+    install(ContentNegotiation) {
+        gson { setPrettyPrinting() }
+    }
+
     routing {
-        get("/") {
-            call.respondText("Server is running on port 3031. Visit /admin to manage content.")
-        }
+        // --- Public API Routes ---
+        get("/discounts") { call.respond(discountItems) }
+        get("/recipes") { call.respond(recipes) }
+        get("/notifications") { call.respond(notifications) }
 
-        // --- Discounts API ---
-        route("/discounts") {
-            get {
-                call.respond(discountItems)
+        // --- Pages ---
+        get("/login") { call.respondText(loginHtml, ContentType.Text.Html) }
+
+        // IMPORTANT: /admin 页面本身不做 Basic Auth（否则浏览器跳转永远 401）
+        // 真正的“写操作”与“校验”放在需要认证的 API 上
+        get("/admin") { call.respondText(adminHtml, ContentType.Text.Html) }
+
+        // --- Admin Routes (Protected) ---
+        authenticate("admin-auth") {
+            // login 用来验证密码是否正确
+            get("/admin/ping") { call.respondText("ok") }
+
+            post("/discounts") {
+                val item = call.receive<DiscountItem>().copy(id = UUID.randomUUID().toString())
+                discountItems.add(0, item)
+                call.respond(HttpStatusCode.Created, item)
             }
-            post {
-                try {
-                    val item = call.receive<DiscountItem>()
-                    // Use a new ID or the one provided
-                    val newItem = if (item.id.isEmpty()) item.copy(id = UUID.randomUUID().toString()) else item
-                    discountItems.add(0, newItem) // Add to top
-                    call.respond(HttpStatusCode.Created, newItem)
-                } catch (e: Exception) {
-                    call.respond(HttpStatusCode.BadRequest, "Invalid data: ${e.message}")
+
+            post("/recipes") {
+                val item = call.receive<Recipe>().copy(id = UUID.randomUUID().toString())
+                recipes.add(0, item)
+                call.respond(HttpStatusCode.Created, item)
+            }
+
+            post("/notifications") {
+                val item = call.receive<Notification>().copy(
+                    id = UUID.randomUUID().toString(),
+                    date = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm"))
+                )
+                notifications.add(0, item)
+                call.respond(HttpStatusCode.Created, item)
+            }
+
+            delete("/delete/{type}/{id}") {
+                val type = call.parameters["type"]
+                val id = call.parameters["id"]
+                val removed = when (type) {
+                    "notification" -> notifications.removeIf { it.id == id }
+                    "discount" -> discountItems.removeIf { it.id == id }
+                    "recipe" -> recipes.removeIf { it.id == id }
+                    else -> false
                 }
+                if (removed) call.respond(HttpStatusCode.OK) else call.respond(HttpStatusCode.NotFound)
             }
-        }
-
-        // --- Recipes API ---
-        route("/recipes") {
-            get {
-                call.respond(recipes)
-            }
-            post {
-                try {
-                    val item = call.receive<Recipe>()
-                    val newItem = if (item.id.isEmpty()) item.copy(id = UUID.randomUUID().toString()) else item
-                    recipes.add(0, newItem) // Add to top
-                    call.respond(HttpStatusCode.Created, newItem)
-                } catch (e: Exception) {
-                    call.respond(HttpStatusCode.BadRequest, "Invalid data: ${e.message}")
-                }
-            }
-        }
-
-        // --- Admin Web Page ---
-        get("/admin") {
-            call.respondText(adminHtml, ContentType.Text.Html)
         }
     }
 }
 
-// Simple Admin HTML embedded for convenience
-val adminHtml = """
+// --- HTML Templates ---
+
+val loginHtml = """
 <!DOCTYPE html>
-<html lang="ja">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Project Design Admin</title>
+    <meta charset="utf-8" />
+    <title>Admin Login</title>
     <style>
-        body { font-family: sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
-        .card { border: 1px solid #ccc; padding: 20px; margin-bottom: 20px; border-radius: 8px; }
-        label { display: block; margin-top: 10px; font-weight: bold; }
-        input, textarea { width: 100%; padding: 8px; margin-top: 5px; box-sizing: border-box; }
-        button { background-color: #007bff; color: white; padding: 10px 20px; border: none; border-radius: 4px; margin-top: 15px; cursor: pointer; }
-        button:hover { background-color: #0056b3; }
-        h2 { margin-top: 0; }
-        .success { color: green; display: none; margin-top: 10px; }
-        .error { color: red; display: none; margin-top: 10px; }
+        body { font-family: sans-serif; max-width: 520px; margin: 50px auto; padding: 20px; }
+        label, input, button { display: block; width: 100%; margin-top: 10px; box-sizing: border-box; }
+        input, button { padding: 10px; }
+        .hint { color: #666; font-size: 12px; margin-top: 12px; }
+        .error { color: #c00; margin-top: 12px; }
     </style>
 </head>
 <body>
-    <h1>管理画面 (Admin)</h1>
+    <h2>Admin Login</h2>
 
-    <!-- Discount Form -->
-    <div class="card">
-        <h2>割引商品の追加</h2>
-        <form id="discountForm">
-            <label>商品名 (Name):</label>
-            <input type="text" name="name" required placeholder="例: サンドイッチ">
-            
-            <label>元値 (Old Price):</label>
-            <input type="number" name="oldPrice" required placeholder="350">
-            
-            <label>割引価格 (New Price):</label>
-            <input type="number" name="newPrice" required placeholder="240">
-            
-            <label>理由 (Reason):</label>
-            <input type="text" name="reason" placeholder="例: 消費期限が近いため">
-            
-            <label>アイコン (Emoji/Icon):</label>
-            <input type="text" name="icon" required placeholder="🥪">
+    <label>User</label>
+    <input type="text" id="user" value="admin" readonly />
 
-            <button type="submit">商品を追加</button>
-            <div class="success" id="discountSuccess">追加しました！</div>
-            <div class="error" id="discountError">エラーが発生しました</div>
-        </form>
-    </div>
+    <label>Password</label>
+    <input type="password" id="password" placeholder="projectdesign" />
 
-    <!-- Recipe Form -->
-    <div class="card">
-        <h2>レシピの追加</h2>
-        <form id="recipeForm">
-            <label>レシピ名 (Name):</label>
-            <input type="text" name="name" required>
-            
-            <label>説明 (Description):</label>
-            <textarea name="description" required></textarea>
-            
-            <label>分量 (Servings):</label>
-            <input type="text" name="servings" required placeholder="例: 2人分">
-            
-            <label>材料 (Ingredients) - 1行に1つ:</label>
-            <textarea name="ingredients" required placeholder="豚肉: 100g&#10;玉ねぎ: 1個"></textarea>
-            
-            <label>調味料 (Seasonings) - 1行に1つ:</label>
-            <textarea name="seasonings" required placeholder="塩: 少々&#10;胡椒: 少々"></textarea>
-            
-            <label>作り方 (Instructions) - 1行に1つ:</label>
-            <textarea name="instructions" required placeholder="材料を切ります&#10;炒めます"></textarea>
-            
-            <label>コツ・ポイント (Tips) - 1行に1つ:</label>
-            <textarea name="tips" required placeholder="強火で炒めると美味しいです"></textarea>
-
-            <button type="submit">レシピを追加</button>
-            <div class="success" id="recipeSuccess">追加しました！</div>
-            <div class="error" id="recipeError">エラーが発生しました</div>
-        </form>
-    </div>
+    <button type="button" onclick="login()">Login</button>
+    <div class="hint">※ パスワードが正しければ /admin に移動します。</div>
+    <div id="error" class="error"></div>
 
     <script>
-        // Discount Submit Handler
-        document.getElementById('discountForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const formData = new FormData(e.target);
-            const data = {
-                name: formData.get('name'),
-                oldPrice: parseInt(formData.get('oldPrice')),
-                newPrice: parseInt(formData.get('newPrice')),
-                reason: formData.get('reason') || null,
-                icon: formData.get('icon')
-            };
+        async function login() {
+            const user = document.getElementById('user').value;
+            const password = document.getElementById('password').value;
+            const errorEl = document.getElementById('error');
+            errorEl.textContent = '';
 
-            sendData('/discounts', data, 'discountSuccess', 'discountError', e.target);
-        });
-
-        // Recipe Submit Handler
-        document.getElementById('recipeForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const formData = new FormData(e.target);
-            
-            // Convert newline separated strings to arrays
-            const ingredients = formData.get('ingredients').split('\n').filter(line => line.trim() !== '');
-            const seasonings = formData.get('seasonings').split('\n').filter(line => line.trim() !== '');
-            const tips = formData.get('tips').split('\n').filter(line => line.trim() !== '');
-            
-            // Simple instruction handling (text only for now)
-            const instructionsText = formData.get('instructions').split('\n').filter(line => line.trim() !== '');
-            const instructions = instructionsText.map(desc => ({ description: desc, imageUrl: null }));
-
-            const data = {
-                name: formData.get('name'),
-                description: formData.get('description'),
-                imageUrl: null,
-                servings: formData.get('servings'),
-                ingredients: ingredients,
-                seasonings: seasonings,
-                instructions: instructions,
-                tips: tips
-            };
-
-            sendData('/recipes', data, 'recipeSuccess', 'recipeError', e.target);
-        });
-
-        async function sendData(url, data, successId, errorId, form) {
-            const successEl = document.getElementById(successId);
-            const errorEl = document.getElementById(errorId);
-            successEl.style.display = 'none';
-            errorEl.style.display = 'none';
+            const token = btoa(user + ':' + password);
 
             try {
-                const response = await fetch(url, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(data)
+                // 认证验证：成功才保存 token 并跳转
+                const res = await fetch('/admin/ping', {
+                    headers: { 'Authorization': 'Basic ' + token }
                 });
 
-                if (response.ok) {
-                    successEl.style.display = 'block';
-                    form.reset();
-                    setTimeout(() => successEl.style.display = 'none', 3000);
-                } else {
-                    errorEl.textContent = 'エラー: ' + response.status;
-                    errorEl.style.display = 'block';
+                if (!res.ok) {
+                    errorEl.textContent = 'Login failed. パスワードが違います。';
+                    return;
                 }
-            } catch (err) {
-                console.error(err);
-                errorEl.textContent = '通信エラー';
-                errorEl.style.display = 'block';
+
+                sessionStorage.setItem('adminToken', token);
+                window.location.href = '/admin';
+            } catch (e) {
+                console.error(e);
+                errorEl.textContent = 'Network error.';
             }
         }
     </script>
 </body>
 </html>
-"""
+""".trimIndent()
+
+val adminHtml = """
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8" />
+    <title>Admin</title>
+    <style>
+        body { font-family: sans-serif; max-width: 900px; margin: auto; padding: 20px; }
+        .card { border: 1px solid #ccc; padding: 20px; margin-bottom: 20px; border-radius: 8px; }
+        .item { border-bottom: 1px solid #eee; padding: 10px; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+        .delete-btn { color: red; cursor: pointer; white-space: nowrap; }
+        label, input, textarea, button { display: block; width: 100%; margin-top: 10px; box-sizing: border-box; padding: 8px; }
+        textarea { min-height: 80px; }
+        button { margin-top: 20px; cursor: pointer; }
+        .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        @media (max-width: 720px) { .row { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+    <h1>管理画面</h1>
+
+    <div class="card">
+        <h2>お知らせ一覧</h2>
+        <div id="notificationsList"></div>
+    </div>
+
+    <div class="card">
+        <h2>割引商品一覧</h2>
+        <div id="discountsList"></div>
+    </div>
+
+    <div class="card">
+        <h2>レシピ一覧</h2>
+        <div id="recipesList"></div>
+    </div>
+
+    <div class="card">
+        <h2>お知らせの追加</h2>
+        <form id="notificationForm">
+            <label>タイトル:</label><input type="text" name="title" required />
+            <label>内容:</label><textarea name="content" required></textarea>
+            <button type="submit">お知らせを追加</button>
+        </form>
+    </div>
+
+    <div class="card">
+        <h2>割引商品の追加</h2>
+        <form id="discountForm">
+            <label>商品名:</label><input type="text" name="name" required />
+            <div class="row">
+                <div>
+                    <label>元値:</label><input type="number" name="oldPrice" required />
+                </div>
+                <div>
+                    <label>割引価格:</label><input type="number" name="newPrice" required />
+                </div>
+            </div>
+            <label>理由:</label><input type="text" name="reason" />
+            <label>アイコン:</label><input type="text" name="icon" required />
+            <button type="submit">商品を追加</button>
+        </form>
+    </div>
+
+    <div class="card">
+        <h2>レシピの追加</h2>
+        <form id="recipeForm">
+            <label>レシピ名:</label><input type="text" name="name" required />
+            <label>説明:</label><textarea name="description" required></textarea>
+            <label>分量:</label><input type="text" name="servings" required />
+            <label>材料 (1行1つ):</label><textarea name="ingredients" required></textarea>
+            <label>調味料 (1行1つ):</label><textarea name="seasonings" required></textarea>
+            <label>作り方 (1行1つ):</label><textarea name="instructions" required></textarea>
+            <label>コツ (1行1つ):</label><textarea name="tips" required></textarea>
+            <button type="submit">レシピを追加</button>
+        </form>
+    </div>
+
+<script>
+const token = sessionStorage.getItem('adminToken');
+if (!token) {
+    window.location.href = '/login';
+}
+const authHeader = { 'Authorization': 'Basic ' + token };
+
+async function loadData() {
+    try {
+        const notifications = await (await fetch('/notifications')).json();
+        document.getElementById('notificationsList').innerHTML =
+            notifications.map(n =>
+                `<div class="item">
+                    <span><b>${'$'}{n.title}</b>: ${'$'}{n.content}</span>
+                    <span class="delete-btn" onclick="deleteItem('notification','${'$'}{n.id}')">削除</span>
+                 </div>`
+            ).join('');
+
+        const discounts = await (await fetch('/discounts')).json();
+        document.getElementById('discountsList').innerHTML =
+            discounts.map(d =>
+                `<div class="item">
+                    <span>${'$'}{d.icon} <b>${'$'}{d.name}</b> (${ '$' }{d.newPrice}円)</span>
+                    <span class="delete-btn" onclick="deleteItem('discount','${'$'}{d.id}')">削除</span>
+                 </div>`
+            ).join('');
+
+        const recipes = await (await fetch('/recipes')).json();
+        document.getElementById('recipesList').innerHTML =
+            recipes.map(r =>
+                `<div class="item">
+                    <span><b>${'$'}{r.name}</b>: ${'$'}{r.description}</span>
+                    <span class="delete-btn" onclick="deleteItem('recipe','${'$'}{r.id}')">削除</span>
+                 </div>`
+            ).join('');
+    } catch (e) {
+        console.error('Failed to load data:', e);
+        sessionStorage.removeItem('adminToken');
+        window.location.href = '/login';
+    }
+}
+
+async function deleteItem(type, id) {
+    if (!confirm('本当に削除しますか？')) return;
+
+    const res = await fetch(`/delete/${'$'}{type}/${'$'}{id}`, {
+        method: 'DELETE',
+        headers: authHeader
+    });
+
+    if (res.ok) loadData();
+    else alert('削除に失敗しました。');
+}
+
+document.getElementById('notificationForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const data = { title: e.target.title.value, content: e.target.content.value };
+
+    const res = await fetch('/notifications', {
+        method: 'POST',
+        headers: { ...authHeader, 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+    });
+
+    if (!res.ok) { alert('追加に失敗しました'); return; }
+    alert('お知らせを追加しました');
+    e.target.reset();
+    loadData();
+});
+
+document.getElementById('discountForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const data = {
+        name: e.target.name.value,
+        oldPrice: parseInt(e.target.oldPrice.value, 10),
+        newPrice: parseInt(e.target.newPrice.value, 10),
+        reason: (e.target.reason.value || '').trim() === '' ? null : e.target.reason.value.trim(),
+        icon: e.target.icon.value
+    };
+
+    const res = await fetch('/discounts', {
+        method: 'POST',
+        headers: { ...authHeader, 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+    });
+
+    if (!res.ok) { alert('追加に失敗しました'); return; }
+    alert('割引商品を追加しました');
+    e.target.reset();
+    loadData();
+});
+
+document.getElementById('recipeForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const toList = (str) => str.split('\n').map(s => s.trim()).filter(Boolean);
+
+    const data = {
+        name: e.target.name.value,
+        description: e.target.description.value,
+        servings: e.target.servings.value,
+        ingredients: toList(e.target.ingredients.value),
+        seasonings: toList(e.target.seasonings.value),
+        instructions: toList(e.target.instructions.value).map(d => ({ description: d, imageUrl: null })),
+        tips: toList(e.target.tips.value)
+    };
+
+    const res = await fetch('/recipes', {
+        method: 'POST',
+        headers: { ...authHeader, 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+    });
+
+    if (!res.ok) { alert('追加に失敗しました'); return; }
+    alert('レシピを追加しました');
+    e.target.reset();
+    loadData();
+});
+
+loadData();
+</script>
+</body>
+</html>
+""".trimIndent()

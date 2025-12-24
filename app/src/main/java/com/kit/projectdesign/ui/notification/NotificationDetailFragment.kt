@@ -33,7 +33,7 @@ class NotificationDetailFragment : Fragment() {
         // データをシンプルなViewに設定
         binding.notificationDetailTitle.text = notification.title
         binding.notificationDetailDate.text = notification.date
-        binding.notificationDetailBody.text = notification.body
+        binding.notificationDetailBody.text = notification.content // Changed from .body to .content
 
         // アプリ全体のツールバーにタイトルを設定
         (activity as? AppCompatActivity)?.supportActionBar?.title = notification.title

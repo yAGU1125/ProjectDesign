@@ -1,8 +1,6 @@
 package com.kit.projectdesign.ui.home
 
-import android.graphics.Typeface
 import android.view.LayoutInflater
-import android.view.View
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
 import com.kit.projectdesign.data.Notification
@@ -13,8 +11,17 @@ class NotificationAdapter(
     private val onItemClicked: (Notification) -> Unit
 ) : RecyclerView.Adapter<NotificationAdapter.NotificationViewHolder>() {
 
-    // 表示する件数を保持する変数
-    private var displayItemCount: Int = notifications.size
+    private var displayItemCount = notifications.size
+
+    fun setDisplayItemCount(count: Int) {
+        displayItemCount = count
+        notifyDataSetChanged()
+    }
+
+    fun updateNotifications(newNotifications: List<Notification>) {
+        notifications = newNotifications
+        notifyDataSetChanged()
+    }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): NotificationViewHolder {
         val binding = ListItemNotificationBinding.inflate(LayoutInflater.from(parent.context), parent, false)
@@ -22,36 +29,22 @@ class NotificationAdapter(
     }
 
     override fun onBindViewHolder(holder: NotificationViewHolder, position: Int) {
-        val notification = notifications[position]
-        holder.bind(notification)
-        holder.itemView.setOnClickListener { 
-            onItemClicked(notification)
-        }
+        holder.bind(notifications[position])
     }
 
     override fun getItemCount() = displayItemCount
 
-    // 表示する件数を更新し、リストの再描画を通知するメソッド
-    fun setDisplayItemCount(count: Int) {
-        displayItemCount = count.coerceAtMost(notifications.size)
-        notifyDataSetChanged()
-    }
-
     inner class NotificationViewHolder(private val binding: ListItemNotificationBinding) : RecyclerView.ViewHolder(binding.root) {
         fun bind(notification: Notification) {
             binding.notificationTitle.text = notification.title
-            binding.notificationDate.text = notification.date
-            binding.notificationBody.text = notification.body
-
-            // 既読状態に応じて表示を切り替え
-            if (notification.isRead) {
-                // 既読の場合
-                binding.unreadIndicator.visibility = View.GONE
-                binding.notificationTitle.typeface = Typeface.DEFAULT
-            } else {
-                // 未読の場合
-                binding.unreadIndicator.visibility = View.VISIBLE
-                binding.notificationTitle.typeface = Typeface.DEFAULT_BOLD
+            binding.notificationDate.text = try {
+                // Format date for better readability if needed
+                notification.date.substring(0, 10)
+            } catch (e: Exception) {
+                notification.date
+            }
+            itemView.setOnClickListener {
+                onItemClicked(notification)
             }
         }
     }
